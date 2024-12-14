@@ -30,6 +30,7 @@
 ##
 
 cmake_minimum_required(VERSION 2.6)
+cmake_policy(SET CMP0048 OLD)
 
 PROJECT(qpOASES CXX)
 SET(PACKAGE_NAME "qpOASES")
@@ -68,7 +69,7 @@ IF( NOT CMAKE_BUILD_TYPE )
 ENDIF( NOT CMAKE_BUILD_TYPE )
 
 option(BUILD_SHARED_LIBS "If ON, build shared library instead of static" OFF)
-option(QPOASES_BUILD_EXAMPLES "Build examples." ON)
+option(QPOASES_BUILD_EXAMPLES "Build examples." OFF)
 option(QPOASES_AVOID_LA_NAMING_CONFLICTS "If ON, avoid to re-defined symbols that conflict with Blas/Lapack provided functions." OFF)
 
 IF(BUILD_SHARED_LIBS AND WIN32)
@@ -168,6 +169,10 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/qpOASESConfig.cmake
     ${CMAKE_CURRENT_BINARY_DIR}/qpOASESConfigVersion.cmake
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/qpOASES
     COMPONENT qpOASES)
+
+install(TARGETS qpOASES EXPORT qpOASESTargets)
+export(EXPORT qpOASESTargets FILE ${CMAKE_CURRENT_BINARY_DIR}/qpOASESTargets.cmake)
+install(EXPORT qpOASESTargets DESTINATION lib/cmake/qpOASES)
 
 ############################################################
 ######################### examples #########################
