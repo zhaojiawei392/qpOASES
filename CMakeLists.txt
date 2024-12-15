@@ -29,158 +29,143 @@
 ##     Date:      2007-2017
 ##
 
-cmake_minimum_required(VERSION 2.6)
-cmake_policy(SET CMP0048 OLD)
+cmake_minimum_required(VERSION 3.15)
 
-PROJECT(qpOASES CXX)
-SET(PACKAGE_NAME "qpOASES")
-SET(PACKAGE_VERSION "3.2.2")
-SET(PACKAGE_SO_VERSION "3.2")
-SET(PACKAGE_DESCRIPTION "An implementation of the online active set strategy")
-SET(PACKAGE_AUTHOR "Hans Joachim Ferreau, Andreas Potschka, Christian Kirches et al.")
-SET(PACKAGE_MAINTAINER "Hans Joachim Ferreau, Andreas Potschka, Christian Kirches et al.")
-SET(PACKAGE_URL "https://projects.coin-or.org/qpOASES")
-
-SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
-SET(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/libs)
-
-IF(NOT CMAKE_INSTALL_LIBDIR)
-    SET(CMAKE_INSTALL_LIBDIR lib)
-ENDIF(NOT CMAKE_INSTALL_LIBDIR)
-
-IF(NOT CMAKE_INSTALL_BINDIR)
-    SET(CMAKE_INSTALL_BINDIR ${CMAKE_INSTALL_LIBDIR})
-ENDIF(NOT CMAKE_INSTALL_BINDIR)
-
-IF(NOT CMAKE_INSTALL_INCLUDEDIR)
-    SET(CMAKE_INSTALL_INCLUDEDIR include)
-ENDIF(NOT CMAKE_INSTALL_INCLUDEDIR)
-
-
-IF( NOT CMAKE_VERBOSE_MAKEFILE )
-    SET( CMAKE_VERBOSE_MAKEFILE OFF )
-ENDIF( NOT CMAKE_VERBOSE_MAKEFILE )
-
-IF( NOT CMAKE_BUILD_TYPE )
-    SET(CMAKE_BUILD_TYPE Release CACHE STRING
-        "Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel."
-        FORCE
-        )
-ENDIF( NOT CMAKE_BUILD_TYPE )
-
-option(BUILD_SHARED_LIBS "If ON, build shared library instead of static" OFF)
-option(QPOASES_BUILD_EXAMPLES "Build examples." OFF)
-option(QPOASES_AVOID_LA_NAMING_CONFLICTS "If ON, avoid to re-defined symbols that conflict with Blas/Lapack provided functions." OFF)
-
-IF(BUILD_SHARED_LIBS AND WIN32)
-    MESSAGE(FATAL_ERROR "Compiling qpOASES as a shared library in Windows is not supported.")
-ENDIF()
-
-############################################################
-#################### compiler flags ########################
-############################################################
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__NO_COPYRIGHT__")
-IF(QPOASES_AVOID_LA_NAMING_CONFLICTS)
-  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__AVOID_LA_NAMING_CONFLICTS__")
-ENDIF()
-
-IF ( UNIX )
-    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -Wfloat-equal -Wshadow -DLINUX")
-    SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_DEBUG} -O3 -finline-functions")
-ELSEIF( WINDOWS )
-    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -nologo -EHsc -DWIN32")
-ENDIF()
-
-SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D__DEBUG__")
-
-############################################################
-######################## rpath #############################
-############################################################
-# use, i.e. don't skip the full RPATH for the build tree
-set(CMAKE_SKIP_BUILD_RPATH  FALSE)
-
-# when building, don't use the install RPATH already
-# (but later on when installing)
-set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
-
-set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib:${CMAKE_INSTALL_PREFIX}/lib/casadi")
-
-# add the automatically determined parts of the RPATH
-# which point to directories outside the build tree to the install RPATH
-set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-
-# the RPATH to be used when installing, but only if it's not a system directory
-list(FIND CMAKE_PLATFORM_IMPLICIT_LINK_DIRECTORIES "${CMAKE_INSTALL_PREFIX}/lib" isSystemDir)
-if("${isSystemDir}" STREQUAL "-1")
-   set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib:${CMAKE_INSTALL_PREFIX}/lib/casadi")
-endif("${isSystemDir}" STREQUAL "-1")
-
-
-
-############################################################
-#################### build and install #####################
-############################################################
-INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/include)
-# compile qpOASES libraries
-FILE(GLOB SRC src/*.cpp)
-
-# library
-ADD_LIBRARY(qpOASES ${SRC})
-INSTALL(TARGETS qpOASES
-  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+# Use modern project() syntax
+project(qpOASES
+    VERSION 3.2.2
+    DESCRIPTION "An implementation of the online active set strategy"
+    HOMEPAGE_URL "https://projects.coin-or.org/qpOASES"
+    LANGUAGES CXX
 )
-SET_TARGET_PROPERTIES(
-    qpOASES
-    PROPERTIES
-    SOVERSION ${PACKAGE_SO_VERSION}
+
+# Use modern variable names
+set(qpOASES_VERSION_MAJOR 3)
+set(qpOASES_VERSION_MINOR 2)
+set(qpOASES_VERSION_PATCH 2)
+set(qpOASES_SOVERSION "${qpOASES_VERSION_MAJOR}.${qpOASES_VERSION_MINOR}")
+
+# Use GNUInstallDirs for standard installation directories
+include(GNUInstallDirs)
+
+# Define build options using modern syntax
+option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
+option(QPOASES_BUILD_EXAMPLES "Build examples" OFF)
+option(QPOASES_AVOID_LA_NAMING_CONFLICTS "Avoid Blas/Lapack naming conflicts" OFF)
+
+# Prevent shared library build on Windows
+if(BUILD_SHARED_LIBS AND WIN32)
+    message(FATAL_ERROR "Shared library build is not supported on Windows")
+endif()
+
+# Create main library target
+add_library(qpOASES)
+add_library(qpOASES::qpOASES ALIAS qpOASES)
+
+# Set modern target properties
+target_compile_definitions(qpOASES
+    PRIVATE
+        __NO_COPYRIGHT__
+        $<$<BOOL:${QPOASES_AVOID_LA_NAMING_CONFLICTS}>:__AVOID_LA_NAMING_CONFLICTS__>
+        $<$<CONFIG:Debug>:__DEBUG__>
+        $<$<PLATFORM_ID:Linux>:LINUX>
+        $<$<PLATFORM_ID:Windows>:WIN32>
+)
+
+# Set compiler flags using modern target_compile_options
+if(UNIX)
+    target_compile_options(qpOASES PRIVATE
+        -Wall
+        -pedantic
+        -Wfloat-equal
+        -Wshadow
+        $<$<CONFIG:Release>:-O3 -finline-functions>
     )
+elseif(WIN32)
+    target_compile_options(qpOASES PRIVATE
+        -nologo
+        -EHsc
+    )
+endif()
 
-# headers
-INSTALL(FILES include/qpOASES.hpp
-  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+# Add source files
+file(GLOB SOURCES "src/*.cpp")
+target_sources(qpOASES
+    PRIVATE
+        ${SOURCES}
+)
 
-INSTALL(DIRECTORY include/qpOASES
-  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-  FILES_MATCHING PATTERN "*.hpp"
-  PATTERN "*.ipp"
-  PATTERN ".svn" EXCLUDE)
+# Set include directories
+target_include_directories(qpOASES
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+)
 
-############################################################
-######################### Package Config ###################
-############################################################
+# Set library properties
+set_target_properties(qpOASES PROPERTIES
+    VERSION ${PROJECT_VERSION}
+    SOVERSION ${qpOASES_SOVERSION}
+    EXPORT_NAME qpOASES
+)
 
+# Install targets
+install(TARGETS qpOASES
+    EXPORT qpOASESTargets
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+
+export(EXPORT qpOASESTargets 
+        FILE ${CMAKE_CURRENT_BINARY_DIR}/qpOASESTargets.cmake
+)
+
+# Install headers
+install(FILES include/qpOASES.hpp
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+
+install(DIRECTORY include/qpOASES
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    FILES_MATCHING 
+        PATTERN "*.hpp"
+        PATTERN "*.ipp"
+    PATTERN ".svn" EXCLUDE
+)
+
+# Export targets
+install(EXPORT qpOASESTargets
+    FILE qpOASESTargets.cmake
+    NAMESPACE qpOASES::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/qpOASES
+)
+
+# Generate and install package configuration files
 include(CMakePackageConfigHelpers)
-set(INCLUDE_INSTALL_DIR ${CMAKE_INSTALL_INCLUDEDIR})
-set(LIB_INSTALL_DIR ${CMAKE_INSTALL_LIBDIR})
-configure_package_config_file(qpOASESConfig.cmake.in
-  ${CMAKE_CURRENT_BINARY_DIR}/qpOASESConfig.cmake
-  INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/qpOASES
-  PATH_VARS INCLUDE_INSTALL_DIR LIB_INSTALL_DIR
-  NO_CHECK_REQUIRED_COMPONENTS_MACRO)
+
+configure_package_config_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/qpOASESConfig.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/qpOASESConfig.cmake
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/qpOASES
+)
 
 write_basic_package_version_file(
     ${CMAKE_CURRENT_BINARY_DIR}/qpOASESConfigVersion.cmake
-    VERSION ${PACKAGE_VERSION}
-    COMPATIBILITY SameMajorVersion)
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion
+)
 
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/qpOASESConfig.cmake
+install(FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/qpOASESConfig.cmake
     ${CMAKE_CURRENT_BINARY_DIR}/qpOASESConfigVersion.cmake
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/qpOASES
-    COMPONENT qpOASES)
+)
 
-install(TARGETS qpOASES EXPORT qpOASESTargets)
-export(EXPORT qpOASESTargets FILE ${CMAKE_CURRENT_BINARY_DIR}/qpOASESTargets.cmake)
-install(EXPORT qpOASESTargets DESTINATION lib/cmake/qpOASES)
-
-############################################################
-######################### examples #########################
-############################################################
-
-if (QPOASES_BUILD_EXAMPLES)
-    # compile qpOASES examples
-    SET(EXAMPLE_NAMES
+# Examples
+if(QPOASES_BUILD_EXAMPLES)
+    set(EXAMPLE_NAMES
         example1
         example1a
         example1b
@@ -194,11 +179,11 @@ if (QPOASES_BUILD_EXAMPLES)
         qrecipeSchur
     )
 
-    FOREACH(ELEMENT ${EXAMPLE_NAMES})
-        ADD_EXECUTABLE(${ELEMENT} examples/${ELEMENT}.cpp)
-        TARGET_LINK_LIBRARIES(${ELEMENT} qpOASES)
-    ENDFOREACH(ELEMENT ${EXAMPLE_NAMES})
-endif(QPOASES_BUILD_EXAMPLES)
+    foreach(example ${EXAMPLE_NAMES})
+        add_executable(${example} examples/${example}.cpp)
+        target_link_libraries(${example} PRIVATE qpOASES::qpOASES)
+    endforeach()
+endif()
 
 ##
 ##   end of file
